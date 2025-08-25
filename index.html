@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VyBBe - Kjurja's Startup</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add this line for Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-mZLF4UVrO7QWLzCfYaMNtZPz6sBVDL32gIWTfJP2uWdrTWJ6N6c5gED72wQChain" crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #1778F2;
+            --primary-dark: #0E5CC0;
+            --accent: #10B981;
+            --bg: #F7FBFF;
+            --text: #333;
+            --light-text: #666;
+            --border: #e7eef7;
+            --card-bg: #fff;
+        }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .logo-text h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .logo-text p {
+            font-size: 12px;
+            color: var(--light-text);
+            margin-top: -4px;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cart-btn {
+            position: relative;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--accent);
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Hero Section */
+        .hero {
+            margin: 24px 0;
+        }
+        
+        .hero-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .hero-content {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 16px;
+        }
+        
+        .hero-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            width: fit-content;
+        }
+        
+        .hero-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        
+        .hero-description {
+            color: var(--light-text);
+            line-height: 1.6;
+        }
+        
+        .hero-categories {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .category-chip {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+        }
+        
+        .category-chip.active {
+            background: #f5f7ff;
+        }
+        
+        .hero-image {
+            height: 280px;
+            overflow: hidden;
+        }
+        
+        .hero-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Category Tabs */
+        .category-tabs {
+            margin: 24px 0;
+        }
+        
+        .tabs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .tab-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-emoji {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .tab-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        
+        .tab-subtitle {
+            font-size: 12px;
+            color: var(--light-text);
+        }
+        
+        /* Menu Section */
+        .menu-section {
+            margin: 40px 0;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .section-subtitle {
+            color: var(--light-text);
+            font-size: 14px;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .menu-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .menu-image {
+            height: 180px;
+            overflow: hidden;
+        }
+        
+        .menu-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover .menu-image img {
+            transform: scale(1.05);
+        }
+        
+        .menu-content {
+            padding: 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .menu-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .menu-badge {
+            font-size: 12px;
+            color: var(--light-text);
+        }
+        
+        .menu-select {
+            padding: 10px;
+            border-radius: 10px;
+            background: #f5f7ff;
+            border: 1px solid var(--border);
+            outline: none;
+            width: 100%;
+        }
+        
+        .menu-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+        
+        .menu-price {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+        }
+        
+        /* Cart Drawer */
+        .cart-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 100%;
+            max-width: 420px;
+            background: var(--card-bg);
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cart-drawer.open {
+            transform: translateX(0);
+        }
+        
+        .cart-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .cart-title {
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .cart-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--light-text);
+        }
+        
+        .cart-items {
+            padding: 16px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .item-info {
+            flex-grow: 1;
+        }
+        
+        .item-name {
+            font-weight: 600;
+        }
+        
+        .item-details {
+            font-size: 12px;
+            color: var(--light-text);
+            margin-top: 4px;
+        }
+        
+        .item-price {
+            color: var(--primary);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        
+        .item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .item-remove {
+            color: #ff4757;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 12px;
+        }
+        
+        .cart-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .cart-totals {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .total-final {
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .checkout-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .checkout-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .checkout-btn:not(:disabled):hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            z-index: 1001;
+            width: 90%;
+            max-width: 500px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal.active {
+            display: block;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--light-text);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1002;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            display: none;
+        }
+        
+        .toast.active {
+            display: flex;
+        }
+        
+        .toast-error {
+            background: #ff6b6b;
+        }
+        
+        /* Staff Panel */
+        .staff-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            z-index: 1001;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .staff-panel.active {
+            display: block;
+        }
+        
+        .staff-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .staff-title {
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .staff-content {
+            padding: 20px;
+        }
+        
+        .staff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .staff-section {
+            margin-bottom: 24px;
+        }
+        
+        .staff-subtitle {
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        
+        .staff-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .staff-member {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        
+        .staff-name {
+            font-weight: 600;
+        }
+        
+        .staff-role {
+            font-size: 14px;
+            color: var(--light-text);
+        }
+        
+        .staff-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent);
+        }
+        
+        .status-inactive {
+            background: rgba(100, 100, 100, 0.1);
+            color: var(--light-text);
+        }
+        
+        .order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .order-item {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        
+        .order-id {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .order-details {
+            font-size: 14px;
+            color: var(--light-text);
+            margin-bottom: 6px;
+        }
+        
+        .order-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        
+        .status-received {
+            background: rgba(30, 144, 255, 0.1);
+            color: var(--primary);
+        }
+        
+        .status-preparing {
+            background: rgba(255, 165, 0, 0.1);
+            color: orange;
+        }
+        
+        .status-delivered {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent);
+        }
+        
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            z-index: 1001;
+            width: 90%;
+            max-width: 400px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .login-modal.active {
+            display: block;
+        }
+        
+        .login-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        .login-title {
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .login-body {
+            padding: 20px;
+        }
+        
+        .login-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-image {
+                height: 200px;
+            }
+            
+            .tabs-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .staff-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cart-drawer {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">👨‍🍳</div>
+                    <div class="logo-text">
+                        <h1>VyBBe</h1>
+                        <p>Delicious • Fast • Fresh</p>
+                    </div>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn btn-outline" id="staffLoginBtn">Staff Login</button>
+                    <button class="btn btn-primary cart-btn" id="cartBtn">
+                        🛒 Cart <span class="cart-count" id="cartCount">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-card">
+                <div class="hero-grid">
+                    <div class="hero-content">
+                        <div class="hero-badge">VyBBe Special</div>
+                        <h2 class="hero-title">Momos, Rolls & Drinks — order in seconds.</h2>
+                        <p class="hero-description">Freshly made, pocket-friendly prices. Tap a dish to add to cart. Free condiments with all momos.</p>
+                        <div class="hero-categories">
+                            <div class="category-chip active">Momos</div>
+                            <div class="category-chip">Rolls</div>
+                            <div class="category-chip">Drinks</div>
+                        </div>
+                    </div>
+                    <div class="hero-image">
+                        <img src="https://images.unsplash.com/photo-1606491956689-2ea866880c84?q=80&w=1600&auto=format&fit=crop" alt="Food">
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Category Tabs -->
+        <section class="category-tabs">
+            <div class="tabs-grid">
+                <div class="tab-card">
+                    <div class="tab-emoji">🥟</div>
+                    <div class="tab-title">Momos</div>
+                    <div class="tab-subtitle">VyBBe specials</div>
+                </div>
+                <div class="tab-card">
+                    <div class="tab-emoji">🌯</div>
+                    <div class="tab-title">Rolls (Wrap)</div>
+                    <div class="tab-subtitle">VyBBe specials</div>
+                </div>
+                <div class="tab-card">
+                    <div class="tab-emoji">🥤</div>
+                    <div class="tab-title">Soft Drinks</div>
+                    <div class="tab-subtitle">VyBBe specials</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Menu Sections -->
+        <section class="menu-section" id="momos-section">
+            <div class="section-header">
+                <div>
+                    <h3 class="section-title">🥟 Momos</h3>
+                    <p class="section-subtitle">Hand-picked VyBBe favourites</p>
+                </div>
+            </div>
+            <div class="menu-grid">
+                <!-- Veg Steamed Momos -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1617696079111-cedce4fd9dff?q=80&w=1200&auto=format&fit=crop" alt="Veg Steamed Momos">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">Veg VyBBe Steamed Momos</h4>
+                        <div class="menu-badge">Selected: Half (6 pcs)</div>
+                        <select class="menu-select">
+                            <option value="half">Half (6 pcs) — ₹39</option>
+                            <option value="full">Full (12 pcs) — ₹49</option>
+                        </select>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹39</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Veg Fried Momos -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1563245372-f21724e3856d?q=80&w=1200&auto=format&fit=crop" alt="Veg Fried Momos">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">Veg VyBBe Fried Momos</h4>
+                        <div class="menu-badge">Selected: Half (6 pcs)</div>
+                        <select class="menu-select">
+                            <option value="half">Half (6 pcs) — ₹45</option>
+                            <option value="full">Full (12 pcs) — ₹59</option>
+                        </select>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹45</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paneer Steamed Momos -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1604335399105-a0c02dc9f0d9?q=80&w=1200&auto=format&fit=crop" alt="Paneer Steamed Momos">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">Paneer VyBBe Steamed Momos</h4>
+                        <div class="menu-badge">Selected: Half (6 pcs)</div>
+                        <select class="menu-select">
+                            <option value="half">Half (6 pcs) — ₹49</option>
+                            <option value="full">Full (12 pcs) — ₹69</option>
+                        </select>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹49</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="menu-section" id="rolls-section">
+            <div class="section-header">
+                <div>
+                    <h3 class="section-title">🌯 Rolls (Wrap)</h3>
+                    <p class="section-subtitle">Hand-picked VyBBe favourites</p>
+                </div>
+            </div>
+            <div class="menu-grid">
+                <!-- Chaap Roll -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1598214886806-c87b84b7078a?q=80&w=1200&auto=format&fit=crop" alt="Chaap Roll">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">Chaap VyBBe Roll</h4>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹49</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paneer Roll -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?q=80&w=1200&auto=format&fit=crop" alt="Paneer Roll">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">Paneer VyBBe Roll</h4>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹69</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="menu-section" id="drinks-section">
+            <div class="section-header">
+                <div>
+                    <h3 class="section-title">🥤 Soft Drinks</h3>
+                    <p class="section-subtitle">Hand-picked VyBBe favourites</p>
+                </div>
+            </div>
+            <div class="menu-grid">
+                <!-- Soft Drinks -->
+                <div class="menu-card">
+                    <div class="menu-image">
+                        <img src="https://images.unsplash.com/photo-1621263764928-e7c7b9a7b8f8?q=80&w=1200&auto=format&fit=crop" alt="Soft Drinks">
+                    </div>
+                    <div class="menu-content">
+                        <h4 class="menu-name">200 ml Glass</h4>
+                        <div class="menu-badge">Selected: Coke</div>
+                        <select class="menu-select">
+                            <option value="coke">Coke</option>
+                            <option value="mountain-dew">Mountain Dew</option>
+                            <option value="sprite">Sprite</option>
+                            <option value="thumbsup">Thums Up</option>
+                        </select>
+                        <div class="menu-footer">
+                            <div class="menu-price">₹20</div>
+                            <button class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="container" style="margin-top: 60px; margin-bottom: 40px; text-align: center; color: var(--light-text);">
+        <p>© 2023 VyBBe. Crafted with ❤️ for delicious moments.</p>
+    </footer>
+    
+    <!-- Cart Drawer -->
+    <div class="cart-drawer" id="cartDrawer">
+        <div class="cart-header">
+            <h3 class="cart-title">Your Cart</h3>
+            <button class="cart-close" id="closeCart">✖</button>
+        </div>
+        <div class="cart-items">
+            <!-- Cart items will be added here dynamically -->
+            <p style="text-align: center; color: var(--light-text); padding: 20px;">Your cart is empty.</p>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-totals">
+                <div class="total-row">
+                    <span>Subtotal</span>
+                    <span>₹0</span>
+                </div>
+                <div class="total-row">
+                    <span>Delivery</span>
+                    <span>₹15</span>
+                </div>
+                <div class="total-row total-final">
+                    <span>Total</span>
+                    <span>₹15</span>
+                </div>
+            </div>
+            <button class="checkout-btn" disabled>Place Order</button>
+        </div>
+    </div>
+    
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkoutModal">
+        <div class="modal-header">
+            <h3 class="modal-title">Checkout</h3>
+            <button class="modal-close" id="closeCheckout">✖</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label" for="customerName">Full Name *</label>
+                <input type="text" class="form-input" id="customerName" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customerPhone">Phone Number *</label>
+                <input type="tel" class="form-input" id="customerPhone" placeholder="Enter your phone number">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customerAddress">Delivery Address *</label>
+                <textarea class="form-input form-textarea" id="customerAddress" placeholder="Enter your delivery address"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="specialInstructions">Special Instructions (optional)</label>
+                <textarea class="form-input form-textarea" id="specialInstructions" placeholder="Any special instructions for delivery"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Payment Method</label>
+                <div style="border: 1px solid var(--border); padding: 12px; border-radius: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="paymentMethod" value="COD" checked> 
+                        Cash on Delivery (COD)
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="cancelCheckout">Cancel</button>
+            <button class="btn btn-primary" id="confirmOrder">Confirm Order</button>
+        </div>
+    </div>
+    
+    <!-- Staff Login Modal -->
+    <div class="login-modal" id="loginModal">
+        <div class="login-header">
+            <h3 class="login-title">Staff Login</h3>
+        </div>
+        <div class="login-body">
+            <div class="form-group">
+                <label class="form-label" for="staffId">Staff ID</label>
+                <input type="text" class="form-input" id="staffId" placeholder="Enter your staff ID">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="staffPassword">Password</label>
+                <input type="password" class="form-input" id="staffPassword" placeholder="Enter your password">
+            </div>
+        </div>
+        <div class="login-footer">
+            <button class="btn btn-outline" id="cancelLogin">Cancel</button>
+            <button class="btn btn-primary" id="confirmLogin">Login</button>
+        </div>
+    </div>
+    
+    <!-- Staff Panel -->
+    <div class="staff-panel" id="staffPanel">
+        <div class="staff-header">
+            <h3 class="staff-title">Staff Management Panel</h3>
+            <button class="modal-close" id="closeStaffPanel">✖</button>
+        </div>
+        <div class="staff-content">
+            <div class="staff-grid">
+                <div>
+                    <div class="staff-section">
+                        <h4 class="staff-subtitle">Staff Members</h4>
+                        <div class="staff-list">
+                            <div class="staff-member">
+                                <div class="staff-name">Raj Sharma</div>
+                                <div class="staff-role">Chef</div>
+                                <div class="staff-status status-active">Active</div>
+                            </div>
+                            <div class="staff-member">
+                                <div class="staff-name">Priya Patel</div>
+                                <div class="staff-role">Delivery</div>
+                                <div class="staff-status status-active">Active</div>
+                            </div>
+                            <div class="staff-member">
+                                <div class="staff-name">Amit Kumar</div>
+                                <div class="staff-role">Manager</div>
+                                <div class="staff-status status-inactive">Inactive</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="staff-section">
+                        <h4 class="staff-subtitle">Add New Staff</h4>
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Full Name">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Phone Number">
+                        </div>
+                        <div class="form-group">
+                            <select class="form-input">
+                                <option value="">Select Role</option>
+                                <option value="chef">Chef</option>
+                                <option value="delivery">Delivery Person</option>
+                                <option value="manager">Manager</option>
+                                <option value="cashier">Cashier</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary">Add Staff Member</button>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="staff-section">
+                        <h4 class="staff-subtitle">Order Management</h4>
+                        <div class="order-list">
+                            <!-- Orders will be dynamically loaded here -->
+                            <!-- The static examples below will be replaced by dynamic content -->
+                            <div class="order-item">
+                                <div class="order-id">Order #ORD-12345</div>
+                                <div class="order-details">Rahul Verma • 2x Momos, 1x Roll • ₹127</div>
+                                <div class="order-status status-preparing">Preparing</div>
+                            </div>
+                            <div class="order-item">
+                                <div class="order-id">Order #ORD-12346</div>
+                                <div class="order-details">Neha Singh • 1x Momos, 2x Drinks • ₹89</div>
+                                <div class="order-status status-delivered">Delivered</div>
+                            </div>
+                            <div class="order-item">
+                                <div class="order-id">Order #ORD-12347</div>
+                                <div class="order-details">Arjun Mehta • 3x Rolls, 1x Drink • ₹156</div>
+                                <div class="order-status status-received">Received</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="staff-section">
+                        <h4 class="staff-subtitle">Quick Stats</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div style="border: 1px solid var(--border); padding: 16px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: 700;">3</div>
+                                <div style="font-size: 14px; color: var(--light-text);">Total Orders</div>
+                            </div>
+                            <div style="border: 1px solid var(--border); padding: 16px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: 700;">2</div>
+                                <div style="font-size: 14px; color: var(--light-text);">Active Orders</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Order placed successfully!</span>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const overlay = document.getElementById('overlay');
+        const cartBtn = document.getElementById('cartBtn');
+        const cartDrawer = document.getElementById('cartDrawer');
+        const closeCart = document.getElementById('closeCart');
+        const cartCount = document.getElementById('cartCount');
+        const checkoutModal = document.getElementById('checkoutModal');
+        const closeCheckout = document.getElementById('closeCheckout');
+        const cancelCheckout = document.getElementById('cancelCheckout');
+        const confirmOrder = document.getElementById('confirmOrder');
+        const staffLoginBtn = document.getElementById('staffLoginBtn');
+        const loginModal = document.getElementById('loginModal');
+        const cancelLogin = document.getElementById('cancelLogin');
+        const confirmLogin = document.getElementById('confirmLogin');
+        const closeStaffPanel = document.getElementById('closeStaffPanel');
+        const staffPanel = document.getElementById('staffPanel');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        // Cart State
+        let cartItems = [];
+
+        // --- Backend URL ---
+        // IMPORTANT: Replace 'http://127.0.0.1:3000' with the actual URL of your Node.js backend server
+        const BACKEND_URL = 'http://localhost:3000'; 
+
+        // --- Socket.IO Client (for staff panel) ---
+        let socket; // This will hold our Socket.IO connection
+
+        // --- VAPID Public Key (will be fetched from backend on login) ---
+        let vapidPublicKey = '';
+
+        // Utility function to convert VAPID key from base64 to Uint8Array
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        // --- Service Worker and Push Notification Logic ---
+        async function registerServiceWorkerAndSubscribePush() {
+            // 1. Check for Service Worker and Push API support
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.warn('Service Workers or Push API not supported by this browser.');
+                showToast('Push notifications not supported by your browser.', true);
+                return;
+            }
+
+            try {
+                // 2. Register the Service Worker
+                // IMPORTANT: Ensure service-worker.js is in the root of your domain or adjust path
+                const registration = await navigator.serviceWorker.register('/service-worker.js');
+                console.log('Service Worker registered:', registration);
+
+                // 3. Get existing push subscription or subscribe new one
+                let subscription = await registration.pushManager.getSubscription();
+
+                if (subscription) {
+                    console.log('Existing push subscription found:', subscription);
+                } else {
+                    console.log('No existing push subscription, subscribing...');
+                    // 4. Subscribe to push notifications
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true, // Must be true for most browsers
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) // Your VAPID public key
+                    });
+                    console.log('New push subscription:', subscription);
+
+                    // 5. Send the new subscription to your backend
+                    await fetch(`${BACKEND_URL}/api/subscribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(subscription)
+                    });
+                    console.log('Push subscription sent to backend.');
+                }
+                showToast('Push notifications enabled!', false);
+
+            } catch (error) {
+                console.error('Error with Service Worker or Push Subscription:', error);
+                // Provide more specific error messages for common issues
+                if (error.message.includes('user denied permission')) {
+                    showToast('Push notifications blocked. Please enable them in browser settings.', true);
+                } else if (error.message.includes('Only secure origins are allowed')) {
+                    showToast('Push notifications require HTTPS. Please use a secure connection.', true);
+                } else {
+                    showToast('Failed to enable push notifications. Please try again.', true);
+                }
+            }
+        }
+        
+        // Toggle Cart Drawer
+        function toggleCart() {
+            cartDrawer.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        
+        // Toggle Modal
+        function toggleModal(modal) {
+            modal.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        // Show Toast
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            toast.classList.toggle('toast-error', isError);
+            toast.classList.add('active');
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        // --- Socket.IO Client (for staff panel) ---
+        // Function to connect to Socket.IO
+        function connectSocketIO() {
+            // Ensure socket is not already connected
+            if (socket && socket.connected) {
+                console.log('Socket.IO already connected.');
+                return;
+            }
+
+            socket = io(BACKEND_URL);
+
+            socket.on('connect', () => {
+                console.log('Connected to Socket.IO server');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from Socket.IO server');
+            });
+
+            // Listener for new orders from the server
+            socket.on('newOrder', (order) => {
+                console.log('Real-time new order received:', order);
+                // Update staff panel UI with the new order
+                addOrderToStaffPanel(order);
+                // Push notification is now handled by the Service Worker,
+                // so we don't need showBrowserNotification here for persistent ones.
+                // You can uncomment the line below if you still want an immediate in-browser alert
+                // in addition to the push notification.
+                // showBrowserNotification(`New Order: ${order.id}`, `Customer: ${order.customer.name}, Items: ${order.items.length}`);
+            });
+
+            // Listener for existing orders when staff first connects
+            socket.on('existingOrders', (existingOrders) => {
+                console.log('Existing orders received:', existingOrders);
+                // Populate staff panel with existing orders on connection
+                populateStaffOrders(existingOrders);
+            });
+
+            // Listener for order status updates
+            socket.on('orderUpdated', (updatedOrder) => {
+                console.log('Order updated in real-time:', updatedOrder);
+                // Find and update the specific order in the staff panel UI
+                updateOrderInStaffPanel(updatedOrder);
+            });
+        }
+
+        // --- Browser Notification Function (Optional, for in-browser alerts) ---
+        // This function is for non-persistent notifications that appear only when the browser tab is open.
+        // The main push notifications are now handled by the Service Worker.
+        function showBrowserNotification(title, body) {
+            if (!("Notification" in window)) {
+                console.warn("This browser does not support desktop notification");
+                return;
+            }
+            if (Notification.permission === "granted") {
+                new Notification(title, { body: body });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(title, { body: body });
+                    }
+                });
+            }
+        }
+        
+        // Add to Cart
+        function addToCart(item) {
+            cartItems.push(item);
+            updateCartCount();
+            updateCartItems();
+            showToast(`${item.name} added to cart!`);
+        }
+        
+        // Update Cart Count
+        function updateCartCount() {
+            cartCount.textContent = cartItems.length;
+        }
+        
+        // Update Cart Items
+        function updateCartItems() {
+            const cartItemsContainer = document.querySelector('.cart-items');
+            const checkoutBtn = document.querySelector('.checkout-btn');
+            
+            if (cartItems.length === 0) {
+                cartItemsContainer.innerHTML = '<p style="text-align: center; color: var(--light-text); padding: 20px;">Your cart is empty.</p>';
+                checkoutBtn.disabled = true;
+                return;
+            }
+            
+            let itemsHTML = '';
+            let subtotal = 0;
+            
+            cartItems.forEach((item, index) => {
+                subtotal += item.price;
+                
+                itemsHTML += `
+                    <div class="cart-item">
+                        <div class="item-info">
+                            <div class="item-name">${item.name}</div>
+                            ${item.variant ? `<div class="item-details">${item.variant}</div>` : ''}
+                            <div class="item-price">₹${item.price}</div>
+                        </div>
+                        <div class="item-quantity">
+                            <button class="quantity-btn">-</button>
+                            <span>1</span>
+                            <button class="quantity-btn">+</button>
+                            <button class="item-remove" data-index="${index}">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const delivery = 15;
+            const total = subtotal + delivery;
+            
+            cartItemsContainer.innerHTML = itemsHTML;
+            
+            document.querySelector('.cart-totals .total-row:nth-child(1) span:last-child').textContent = `₹${subtotal}`;
+            document.querySelector('.cart-totals .total-row:nth-child(2) span:last-child').textContent = `₹${delivery}`;
+            document.querySelector('.cart-totals .total-row:nth-child(3) span:last-child').textContent = `₹${total}`;
+            
+            checkoutBtn.disabled = false;
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.item-remove').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    cartItems.splice(index, 1);
+                    updateCartCount();
+                    updateCartItems();
+                });
+            });
+        }
+        
+        // Place Order (Modified to send to backend)
+        async function placeOrder() {
+            const name = document.getElementById('customerName').value;
+            const phone = document.getElementById('customerPhone').value;
+            const address = document.getElementById('customerAddress').value;
+            const specialInstructions = document.getElementById('specialInstructions').value; // Get special instructions
+
+            if (!name || !phone || !address) {
+                showToast('Please fill all required fields', true);
+                return;
+            }
+
+            const orderData = {
+                customer: { name, phone, address, specialInstructions }, // Include special instructions
+                items: cartItems.map(item => ({ // Map cart items to a cleaner format for backend
+                    name: item.name,
+                    price: item.price,
+                    variant: item.variant
+                }))
+            };
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (!response.ok) {
+                    // Handle HTTP errors (e.g., 404, 500)
+                    const errorData = await response.json(); // Try to parse error message from backend
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('Order placed on backend:', result);
+
+                showToast('Order placed successfully! Staff has been notified.');
+
+                // Reset cart and close modals
+                cartItems = [];
+                updateCartCount();
+                updateCartItems();
+                toggleModal(checkoutModal);
+                toggleCart();
+
+                // Clear form
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('customerAddress').value = '';
+                document.getElementById('specialInstructions').value = '';
+
+            } catch (error) {
+                console.error('Error placing order:', error);
+                showToast(`Failed to place order: ${error.message}. Please try again.`, true);
+            }
+        }
+        
+        // Staff Login (Modified to authenticate with backend and register push)
+        async function staffLogin() {
+            const staffId = document.getElementById('staffId').value;
+            const password = document.getElementById('staffPassword').value;
+
+            if (!staffId || !password) {
+                showToast('Please enter staff ID and password', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/staff/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ staffId, password })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('Staff login successful:', result);
+
+                // Store the public VAPID key received from the backend
+                vapidPublicKey = result.publicVapidKey;
+
+                // If login is successful, connect to Socket.IO and show staff panel
+                connectSocketIO(); // Establish WebSocket connection
+                toggleModal(loginModal);
+                staffPanel.classList.add('active');
+                overlay.classList.add('active');
+
+                // Register Service Worker and subscribe for push notifications
+                await registerServiceWorkerAndSubscribePush();
+
+            } catch (error) {
+                console.error('Staff login failed:', error);
+                showToast(`Login failed: ${error.message}. Please check credentials.`, true);
+            }
+        }
+
+        // --- Staff Panel UI Updates (New Functions) ---
+        // Get the order list container in the staff panel
+        const staffOrderList = staffPanel.querySelector('.order-list');
+
+        // Function to populate the staff panel with a list of orders
+        function populateStaffOrders(ordersToDisplay) {
+            staffOrderList.innerHTML = ''; // Clear existing orders
+            if (ordersToDisplay.length === 0) {
+                staffOrderList.innerHTML = '<p style="text-align: center; color: var(--light-text); padding: 20px;">No orders yet.</p>';
+                return;
+            }
+            // Add orders, newest first
+            ordersToDisplay.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            ordersToDisplay.forEach(order => addOrderToStaffPanel(order));
+        }
+
+        // Function to add a single order to the staff panel UI
+        function addOrderToStaffPanel(order) {
+            const orderItem = document.createElement('div');
+            orderItem.className = 'order-item';
+            orderItem.setAttribute('data-order-id', order.id); // Add data attribute for easy lookup
+
+            // Calculate total amount (assuming delivery is always 15)
+            const totalAmount = order.items.reduce((sum, item) => sum + item.price, 0) + 15;
+            const itemsSummary = order.items.map(item => `${item.name}${item.variant ? ` (${item.variant})` : ''}`).join(', ');
+
+            orderItem.innerHTML = `
+                <div class="order-id">${order.id}</div>
+                <div class="order-details">
+                    ${order.customer.name} • ${itemsSummary} • ₹${totalAmount}
+                    ${order.customer.specialInstructions ? `<br><em>Instructions: ${order.customer.specialInstructions}</em>` : ''}
+                </div>
+                <div class="order-status status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</div>
+                <div style="margin-top: 10px;">
+                    <select class="form-input order-status-select" data-order-id="${order.id}">
+                        <option value="received" ${order.status === 'received' ? 'selected' : ''}>Received</option>
+                        <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Preparing</option>
+                        <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                    </select>
+                </div>
+            `;
+            staffOrderList.prepend(orderItem); // Add new orders to the top of the list
+
+            // Add event listener for status change
+            orderItem.querySelector('.order-status-select').addEventListener('change', function() {
+                const orderId = this.getAttribute('data-order-id');
+                const newStatus = this.value;
+                if (socket && socket.connected) { // Ensure socket is connected before emitting
+                    socket.emit('updateOrderStatus', { orderId, newStatus });
+                } else {
+                    console.warn('Socket not connected. Cannot update order status.');
+                    showToast('Cannot update status: Not connected to server.', true);
+                }
+            });
+        }
+
+        // Function to update an existing order in the staff panel UI
+        function updateOrderInStaffPanel(updatedOrder) {
+            const existingOrderItem = staffOrderList.querySelector(`[data-order-id="${updatedOrder.id}"]`);
+            if (existingOrderItem) {
+                // Update the status text and class
+                existingOrderItem.querySelector('.order-status').className = `order-status status-${updatedOrder.status}`;
+                existingOrderItem.querySelector('.order-status').textContent = updatedOrder.status.charAt(0).toUpperCase() + updatedOrder.status.slice(1);
+                // Update the select dropdown value
+                existingOrderItem.querySelector('.order-status-select').value = updatedOrder.status;
+            }
+        }
+        
+        // Event Listeners
+        cartBtn.addEventListener('click', toggleCart);
+        closeCart.addEventListener('click', toggleCart);
+        overlay.addEventListener('click', function() {
+            cartDrawer.classList.remove('open');
+            checkoutModal.classList.remove('active');
+            loginModal.classList.remove('active');
+            // Check if staff panel was active before closing it
+            if (staffPanel.classList.contains('active')) {
+                staffPanel.classList.remove('active');
+                if (socket) {
+                    socket.disconnect();
+                    console.log('Socket.IO disconnected on overlay click (staff panel closed).');
+                }
+            }
+            overlay.classList.remove('active');
+        });
+        
+        document.querySelectorAll('.btn-primary').forEach(button => {
+            if (button.textContent === 'Add') {
+                button.addEventListener('click', function() {
+                    const card = this.closest('.menu-card');
+                    const name = card.querySelector('.menu-name').textContent;
+                    const price = parseInt(card.querySelector('.menu-price').textContent.replace('₹', ''));
+                    let variant = null;
+                    
+                    if (card.querySelector('.menu-select')) {
+                        variant = card.querySelector('.menu-select option:checked').textContent.split('—')[0].trim();
+                    }
+                    
+                    addToCart({ name, price, variant });
+                });
+            }
+        });
+        
+        document.querySelector('.checkout-btn').addEventListener('click', function() {
+            if (cartItems.length > 0) {
+                toggleModal(checkoutModal);
+            }
+        });
+        
+        closeCheckout.addEventListener('click', function() {
+            toggleModal(checkoutModal);
+        });
+        
+        cancelCheckout.addEventListener('click', function() {
+            toggleModal(checkoutModal);
+        });
+        
+        confirmOrder.addEventListener('click', placeOrder);
+        
+        staffLoginBtn.addEventListener('click', function() {
+            toggleModal(loginModal);
+        });
+        
+        cancelLogin.addEventListener('click', function() {
+            toggleModal(loginModal);
+        });
+        
+        confirmLogin.addEventListener('click', staffLogin);
+        
+        closeStaffPanel.addEventListener('click', function() {
+            staffPanel.classList.remove('active');
+            overlay.classList.remove('active');
+            // Disconnect Socket.IO when staff panel is closed
+            if (socket) {
+                socket.disconnect();
+                console.log('Socket.IO disconnected on staff panel close.');
+            }
+        });
+        
+        // Initialize
+        updateCartCount();
+        updateCartItems();
+    </script>
+</body>
+</html>
