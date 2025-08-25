@@ -12,7 +12,7 @@ const server = http.createServer(app);
 // Configure CORS for Express (for HTTP requests)
 // IMPORTANT: Replace 'http://127.0.0.1:5500' with your actual frontend URL
 app.use(cors({
-    origin: 'http://127.0.0.1:5500',
+    origin: '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type']
 }));
@@ -21,7 +21,7 @@ app.use(cors({
 // IMPORTANT: Replace 'http://127.0.0.1:5500' with your actual frontend URL
 const io = socketIo(server, {
     cors: {
-        origin: 'http://127.0.0.1:5500',
+        origin: '*',
         methods: ['GET', 'POST']
     }
 });
@@ -31,8 +31,8 @@ app.use(express.json()); // Middleware to parse JSON request bodies
 // --- VAPID Keys (Generate these once and keep them secret!) ---
 // Run `npx web-push generate-vapid-keys` in your terminal to get these.
 // IMPORTANT: Replace these placeholders with your actual generated keys.
-const publicVapidKey = 'BAgzoxaCsZTz_ZHWYZ0pRr4fsbzn1Z3yap06lSxO-j4qvUKT3wWuSvLaJqFQYpzH2EOT6lneIzeHKfZ3wMYHWa8';
-const privateVapidKey = 'Jql7teYCBq6vWRBVgF1Ih-MMCVKSOeAHzEL3oFCzDpk';
+const publicVapidKey = 'BLiRj3rWakPpbrEOrO1SsSbbwAFrflDw1p6ccmwi8AU1C9cE51vbrF4h3sOCMv5G6Osm9ysiXbkOCT2Q5bS4_rs';
+const privateVapidKey = 'U_xYGvp_sh2I5yHfiwTTFlB-7IO3jRIq_knUcSny1z8';
 
 // IMPORTANT: Replace 'mailto:your-email@example.com' with your actual email.
 webpush.setVapidDetails('mailto:prog98952@gmail.com', publicVapidKey, privateVapidKey);
