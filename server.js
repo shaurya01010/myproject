@@ -35,7 +35,7 @@ const publicVapidKey = 'BAgzoxaCsZTz_ZHWYZ0pRr4fsbzn1Z3yap06lSxO-j4qvUKT3wWuSvLa
 const privateVapidKey = 'Jql7teYCBq6vWRBVgF1Ih-MMCVKSOeAHzEL3oFCzDpk';
 
 // IMPORTANT: Replace 'mailto:your-email@example.com' with your actual email.
-webpush.setVapidDetails('mailto:darklightxprime@gmail.com', publicVapidKey, privateVapidKey);
+webpush.setVapidDetails('mailto:prog98952@gmail.com', publicVapidKey, privateVapidKey);
 
 // --- In-memory "Database" for orders, staff, and subscriptions ---
 let orders = []; // Stores all placed orders
