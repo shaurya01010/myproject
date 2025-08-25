@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VyBBe - Kjurja's Startup</title>
+    <title>VyBBe - Food Ordering System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Add this line for Socket.IO client library -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-mZLF4UVrO7QWLzCfYaMNtZPz6sBVDL32gIWTfJP2uWdrTWJ6N6c5gED72wQChain" crossorigin="anonymous"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -537,6 +534,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 16px 16px 0 0;
         }
         
         .modal-title {
@@ -549,7 +549,7 @@
             border: none;
             font-size: 20px;
             cursor: pointer;
-            color: var(--light-text);
+            color: white;
         }
         
         .modal-body {
@@ -645,6 +645,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 16px 16px 0 0;
         }
         
         .staff-title {
@@ -670,6 +673,8 @@
             font-weight: 600;
             font-size: 18px;
             margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
         }
         
         .staff-list {
@@ -682,6 +687,7 @@
             padding: 12px;
             border: 1px solid var(--border);
             border-radius: 10px;
+            background: #f9fafc;
         }
         
         .staff-name {
@@ -721,11 +727,13 @@
             padding: 12px;
             border: 1px solid var(--border);
             border-radius: 10px;
+            background: #f9fafc;
         }
         
         .order-id {
             font-weight: 600;
             margin-bottom: 4px;
+            color: var(--primary);
         }
         
         .order-details {
@@ -779,6 +787,9 @@
             padding: 20px;
             border-bottom: 1px solid var(--border);
             text-align: center;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 16px 16px 0 0;
         }
         
         .login-title {
@@ -1181,8 +1192,6 @@
                     <div class="staff-section">
                         <h4 class="staff-subtitle">Order Management</h4>
                         <div class="order-list">
-                            <!-- Orders will be dynamically loaded here -->
-                            <!-- The static examples below will be replaced by dynamic content -->
                             <div class="order-item">
                                 <div class="order-id">Order #ORD-12345</div>
                                 <div class="order-details">Rahul Verma • 2x Momos, 1x Roll • ₹127</div>
@@ -1226,512 +1235,488 @@
     </div>
     
     <script>
-        // DOM Elements
-        const overlay = document.getElementById('overlay');
-        const cartBtn = document.getElementById('cartBtn');
-        const cartDrawer = document.getElementById('cartDrawer');
-        const closeCart = document.getElementById('closeCart');
-        const cartCount = document.getElementById('cartCount');
-        const checkoutModal = document.getElementById('checkoutModal');
-        const closeCheckout = document.getElementById('closeCheckout');
-        const cancelCheckout = document.getElementById('cancelCheckout');
-        const confirmOrder = document.getElementById('confirmOrder');
-        const staffLoginBtn = document.getElementById('staffLoginBtn');
-        const loginModal = document.getElementById('loginModal');
-        const cancelLogin = document.getElementById('cancelLogin');
-        const confirmLogin = document.getElementById('confirmLogin');
-        const closeStaffPanel = document.getElementById('closeStaffPanel');
-        const staffPanel = document.getElementById('staffPanel');
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toastMessage');
+    // DOM Elements
+    const overlay = document.getElementById('overlay');
+    const cartBtn = document.getElementById('cartBtn');
+    const cartDrawer = document.getElementById('cartDrawer');
+    const closeCart = document.getElementById('closeCart');
+    const cartCount = document.getElementById('cartCount');
+    const checkoutModal = document.getElementById('checkoutModal');
+    const closeCheckout = document.getElementById('closeCheckout');
+    const cancelCheckout = document.getElementById('cancelCheckout');
+    const confirmOrder = document.getElementById('confirmOrder');
+    const staffLoginBtn = document.getElementById('staffLoginBtn');
+    const loginModal = document.getElementById('loginModal');
+    const cancelLogin = document.getElementById('cancelLogin');
+    const confirmLogin = document.getElementById('confirmLogin');
+    const closeStaffPanel = document.getElementById('closeStaffPanel');
+    const staffPanel = document.getElementById('staffPanel');
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    // API Base URL
+    const API_BASE = 'http://localhost:3000/api';
+    
+    // Cart State
+    let cartItems = [];
+    let lastOrderCheck = 0; // Track when we last checked for new orders
+    let orderRefreshInterval = null; // Interval for checking new orders
+    
+    // Toggle Cart Drawer
+    function toggleCart() {
+        cartDrawer.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+    
+    // Toggle Modal
+    function toggleModal(modal) {
+        modal.classList.toggle('active');
+        overlay.classList.toggle('active');
+    }
+    
+    // Show Toast
+    function showToast(message, isError = false) {
+        toastMessage.textContent = message;
+        toast.classList.toggle('toast-error', isError);
+        toast.classList.add('active');
         
-        // Cart State
-        let cartItems = [];
-
-        // --- Backend URL ---
-        // IMPORTANT: Replace 'http://127.0.0.1:3000' with the actual URL of your Node.js backend server
-        const BACKEND_URL = 'http://localhost:3000'; 
-
-        // --- Socket.IO Client (for staff panel) ---
-        let socket; // This will hold our Socket.IO connection
-
-        // --- VAPID Public Key (will be fetched from backend on login) ---
-        let vapidPublicKey = '';
-
-        // Utility function to convert VAPID key from base64 to Uint8Array
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding)
-                .replace(/\-/g, '+')
-                .replace(/_/g, '/');
-
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-
-        // --- Service Worker and Push Notification Logic ---
-        async function registerServiceWorkerAndSubscribePush() {
-            // 1. Check for Service Worker and Push API support
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                console.warn('Service Workers or Push API not supported by this browser.');
-                showToast('Push notifications not supported by your browser.', true);
-                return;
-            }
-
-            try {
-                // 2. Register the Service Worker
-                // IMPORTANT: Ensure service-worker.js is in the root of your domain or adjust path
-                const registration = await navigator.serviceWorker.register('/service-worker.js');
-                console.log('Service Worker registered:', registration);
-
-                // 3. Get existing push subscription or subscribe new one
-                let subscription = await registration.pushManager.getSubscription();
-
-                if (subscription) {
-                    console.log('Existing push subscription found:', subscription);
-                } else {
-                    console.log('No existing push subscription, subscribing...');
-                    // 4. Subscribe to push notifications
-                    subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true, // Must be true for most browsers
-                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) // Your VAPID public key
-                    });
-                    console.log('New push subscription:', subscription);
-
-                    // 5. Send the new subscription to your backend
-                    await fetch(`${BACKEND_URL}/api/subscribe`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(subscription)
-                    });
-                    console.log('Push subscription sent to backend.');
-                }
-                showToast('Push notifications enabled!', false);
-
-            } catch (error) {
-                console.error('Error with Service Worker or Push Subscription:', error);
-                // Provide more specific error messages for common issues
-                if (error.message.includes('user denied permission')) {
-                    showToast('Push notifications blocked. Please enable them in browser settings.', true);
-                } else if (error.message.includes('Only secure origins are allowed')) {
-                    showToast('Push notifications require HTTPS. Please use a secure connection.', true);
-                } else {
-                    showToast('Failed to enable push notifications. Please try again.', true);
-                }
-            }
-        }
+        setTimeout(() => {
+            toast.classList.remove('active');
+        }, 3000);
+    }
+    
+    // Add to Cart
+    function addToCart(item) {
+        // Check if item already exists in cart
+        const existingItemIndex = cartItems.findIndex(
+            cartItem => cartItem.name === item.name && cartItem.variant === item.variant
+        );
         
-        // Toggle Cart Drawer
-        function toggleCart() {
-            cartDrawer.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
-        
-        // Toggle Modal
-        function toggleModal(modal) {
-            modal.classList.toggle('active');
-            overlay.classList.toggle('active');
-        }
-        
-        // Show Toast
-        function showToast(message, isError = false) {
-            toastMessage.textContent = message;
-            toast.classList.toggle('toast-error', isError);
-            toast.classList.add('active');
-            
-            setTimeout(() => {
-                toast.classList.remove('active');
-            }, 3000);
-        }
-
-        // --- Socket.IO Client (for staff panel) ---
-        // Function to connect to Socket.IO
-        function connectSocketIO() {
-            // Ensure socket is not already connected
-            if (socket && socket.connected) {
-                console.log('Socket.IO already connected.');
-                return;
-            }
-
-            socket = io(BACKEND_URL);
-
-            socket.on('connect', () => {
-                console.log('Connected to Socket.IO server');
-            });
-
-            socket.on('disconnect', () => {
-                console.log('Disconnected from Socket.IO server');
-            });
-
-            // Listener for new orders from the server
-            socket.on('newOrder', (order) => {
-                console.log('Real-time new order received:', order);
-                // Update staff panel UI with the new order
-                addOrderToStaffPanel(order);
-                // Push notification is now handled by the Service Worker,
-                // so we don't need showBrowserNotification here for persistent ones.
-                // You can uncomment the line below if you still want an immediate in-browser alert
-                // in addition to the push notification.
-                // showBrowserNotification(`New Order: ${order.id}`, `Customer: ${order.customer.name}, Items: ${order.items.length}`);
-            });
-
-            // Listener for existing orders when staff first connects
-            socket.on('existingOrders', (existingOrders) => {
-                console.log('Existing orders received:', existingOrders);
-                // Populate staff panel with existing orders on connection
-                populateStaffOrders(existingOrders);
-            });
-
-            // Listener for order status updates
-            socket.on('orderUpdated', (updatedOrder) => {
-                console.log('Order updated in real-time:', updatedOrder);
-                // Find and update the specific order in the staff panel UI
-                updateOrderInStaffPanel(updatedOrder);
-            });
-        }
-
-        // --- Browser Notification Function (Optional, for in-browser alerts) ---
-        // This function is for non-persistent notifications that appear only when the browser tab is open.
-        // The main push notifications are now handled by the Service Worker.
-        function showBrowserNotification(title, body) {
-            if (!("Notification" in window)) {
-                console.warn("This browser does not support desktop notification");
-                return;
-            }
-            if (Notification.permission === "granted") {
-                new Notification(title, { body: body });
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        new Notification(title, { body: body });
-                    }
-                });
-            }
-        }
-        
-        // Add to Cart
-        function addToCart(item) {
+        if (existingItemIndex !== -1) {
+            // Update quantity if item already exists
+            cartItems[existingItemIndex].quantity += 1;
+            cartItems[existingItemIndex].price = cartItems[existingItemIndex].basePrice * cartItems[existingItemIndex].quantity;
+            showToast(`Increased quantity of ${item.name}`);
+        } else {
+            // Add new item to cart
             cartItems.push(item);
-            updateCartCount();
-            updateCartItems();
             showToast(`${item.name} added to cart!`);
         }
         
-        // Update Cart Count
-        function updateCartCount() {
-            cartCount.textContent = cartItems.length;
+        updateCartCount();
+        updateCartItems();
+    }
+    
+    // Update Cart Count
+    function updateCartCount() {
+        const totalItems = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
+        cartCount.textContent = totalItems;
+    }
+    
+    // Update Cart Items
+    function updateCartItems() {
+        const cartItemsContainer = document.querySelector('.cart-items');
+        const checkoutBtn = document.querySelector('.checkout-btn');
+        
+        if (cartItems.length === 0) {
+            cartItemsContainer.innerHTML = '<p style="text-align: center; color: var(--light-text); padding: 20px;">Your cart is empty.</p>';
+            checkoutBtn.disabled = true;
+            return;
         }
         
-        // Update Cart Items
-        function updateCartItems() {
-            const cartItemsContainer = document.querySelector('.cart-items');
-            const checkoutBtn = document.querySelector('.checkout-btn');
+        let itemsHTML = '';
+        let subtotal = 0;
+        
+        cartItems.forEach((item, index) => {
+            const itemQuantity = item.quantity || 1;
+            const itemTotal = item.basePrice * itemQuantity;
+            subtotal += itemTotal;
             
-            if (cartItems.length === 0) {
-                cartItemsContainer.innerHTML = '<p style="text-align: center; color: var(--light-text); padding: 20px;">Your cart is empty.</p>';
-                checkoutBtn.disabled = true;
-                return;
-            }
-            
-            let itemsHTML = '';
-            let subtotal = 0;
-            
-            cartItems.forEach((item, index) => {
-                subtotal += item.price;
-                
-                itemsHTML += `
-                    <div class="cart-item">
-                        <div class="item-info">
-                            <div class="item-name">${item.name}</div>
-                            ${item.variant ? `<div class="item-details">${item.variant}</div>` : ''}
-                            <div class="item-price">₹${item.price}</div>
-                        </div>
-                        <div class="item-quantity">
-                            <button class="quantity-btn">-</button>
-                            <span>1</span>
-                            <button class="quantity-btn">+</button>
-                            <button class="item-remove" data-index="${index}">Remove</button>
-                        </div>
+            itemsHTML += `
+                <div class="cart-item">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        ${item.variant ? `<div class="item-details">${item.variant}</div>` : ''}
+                        <div class="item-price">₹${itemTotal} (₹${item.basePrice} × ${itemQuantity})</div>
                     </div>
-                `;
-            });
-            
-            const delivery = 15;
-            const total = subtotal + delivery;
-            
-            cartItemsContainer.innerHTML = itemsHTML;
-            
-            document.querySelector('.cart-totals .total-row:nth-child(1) span:last-child').textContent = `₹${subtotal}`;
-            document.querySelector('.cart-totals .total-row:nth-child(2) span:last-child').textContent = `₹${delivery}`;
-            document.querySelector('.cart-totals .total-row:nth-child(3) span:last-child').textContent = `₹${total}`;
-            
-            checkoutBtn.disabled = false;
-            
-            // Add event listeners to remove buttons
-            document.querySelectorAll('.item-remove').forEach(button => {
-                button.addEventListener('click', function() {
-                    const index = parseInt(this.getAttribute('data-index'));
-                    cartItems.splice(index, 1);
-                    updateCartCount();
-                    updateCartItems();
-                });
-            });
-        }
+                    <div class="item-quantity">
+                        <button class="quantity-btn" data-index="${index}" data-action="decrease">-</button>
+                        <span>${itemQuantity}</span>
+                        <button class="quantity-btn" data-index="${index}" data-action="increase">+</button>
+                        <button class="item-remove" data-index="${index}">Remove</button>
+                    </div>
+                </div>
+            `;
+        });
         
-        // Place Order (Modified to send to backend)
-        async function placeOrder() {
-            const name = document.getElementById('customerName').value;
-            const phone = document.getElementById('customerPhone').value;
-            const address = document.getElementById('customerAddress').value;
-            const specialInstructions = document.getElementById('specialInstructions').value; // Get special instructions
-
-            if (!name || !phone || !address) {
-                showToast('Please fill all required fields', true);
-                return;
-            }
-
-            const orderData = {
-                customer: { name, phone, address, specialInstructions }, // Include special instructions
-                items: cartItems.map(item => ({ // Map cart items to a cleaner format for backend
-                    name: item.name,
-                    price: item.price,
-                    variant: item.variant
-                }))
-            };
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(orderData)
-                });
-
-                if (!response.ok) {
-                    // Handle HTTP errors (e.g., 404, 500)
-                    const errorData = await response.json(); // Try to parse error message from backend
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
-                }
-
-                const result = await response.json();
-                console.log('Order placed on backend:', result);
-
-                showToast('Order placed successfully! Staff has been notified.');
-
-                // Reset cart and close modals
-                cartItems = [];
+        const delivery = 15;
+        const total = subtotal + delivery;
+        
+        cartItemsContainer.innerHTML = itemsHTML;
+        
+        document.querySelector('.cart-totals .total-row:nth-child(1) span:last-child').textContent = `₹${subtotal}`;
+        document.querySelector('.cart-totals .total-row:nth-child(2) span:last-child').textContent = `₹${delivery}`;
+        document.querySelector('.cart-totals .total-row:nth-child(3) span:last-child').textContent = `₹${total}`;
+        
+        checkoutBtn.disabled = false;
+        
+        // Add event listeners to remove buttons
+        document.querySelectorAll('.item-remove').forEach(button => {
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                cartItems.splice(index, 1);
                 updateCartCount();
                 updateCartItems();
-                toggleModal(checkoutModal);
-                toggleCart();
-
-                // Clear form
-                document.getElementById('customerName').value = '';
-                document.getElementById('customerPhone').value = '';
-                document.getElementById('customerAddress').value = '';
-                document.getElementById('specialInstructions').value = '';
-
-            } catch (error) {
-                console.error('Error placing order:', error);
-                showToast(`Failed to place order: ${error.message}. Please try again.`, true);
-            }
+            });
+        });
+        
+        // Add event listeners to quantity buttons
+        document.querySelectorAll('.quantity-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                const action = this.getAttribute('data-action');
+                
+                if (action === 'increase') {
+                    cartItems[index].quantity = (cartItems[index].quantity || 1) + 1;
+                    cartItems[index].price = cartItems[index].basePrice * cartItems[index].quantity;
+                } else if (action === 'decrease' && (cartItems[index].quantity || 1) > 1) {
+                    cartItems[index].quantity = (cartItems[index].quantity || 1) - 1;
+                    cartItems[index].price = cartItems[index].basePrice * cartItems[index].quantity;
+                }
+                
+                updateCartCount();
+                updateCartItems();
+            });
+        });
+    }
+    
+    // Place Order
+    async function placeOrder() {
+        const name = document.getElementById('customerName').value;
+        const phone = document.getElementById('customerPhone').value;
+        const address = document.getElementById('customerAddress').value;
+        const specialInstructions = document.getElementById('specialInstructions').value;
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+        
+        if (!name || !phone || !address) {
+            showToast('Please fill all required fields', true);
+            return;
         }
         
-        // Staff Login (Modified to authenticate with backend and register push)
-        async function staffLogin() {
-            const staffId = document.getElementById('staffId').value;
-            const password = document.getElementById('staffPassword').value;
-
-            if (!staffId || !password) {
-                showToast('Please enter staff ID and password', true);
-                return;
+        try {
+            const response = await fetch(`${API_BASE}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    customer: { name, phone, address },
+                    items: cartItems.map(item => ({
+                        name: item.name,
+                        variant: item.variant,
+                        price: item.price,
+                        quantity: item.quantity || 1,
+                        basePrice: item.basePrice
+                    })),
+                    specialInstructions,
+                    paymentMethod
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to place order');
             }
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/staff/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ staffId, password })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
-                }
-
-                const result = await response.json();
-                console.log('Staff login successful:', result);
-
-                // Store the public VAPID key received from the backend
-                vapidPublicKey = result.publicVapidKey;
-
-                // If login is successful, connect to Socket.IO and show staff panel
-                connectSocketIO(); // Establish WebSocket connection
+            
+            const order = await response.json();
+            
+            // Show success message
+            showToast('Order placed successfully! Staff has been notified.');
+            
+            // Reset cart and close modals
+            cartItems = [];
+            updateCartCount();
+            updateCartItems();
+            toggleModal(checkoutModal);
+            toggleCart();
+            
+            // Clear form
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('specialInstructions').value = '';
+            
+            // If staff panel is open, refresh orders
+            if (staffPanel.classList.contains('active')) {
+                loadStaffData();
+            }
+        } catch (error) {
+            console.error('Error placing order:', error);
+            showToast('Failed to place order. Please try again.', true);
+        }
+    }
+    
+    // Staff Login
+    async function staffLogin() {
+        const staffId = document.getElementById('staffId').value;
+        const password = document.getElementById('staffPassword').value;
+        
+        if (!staffId || !password) {
+            showToast('Please enter staff ID and password', true);
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/staff/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ staffId, password })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
                 toggleModal(loginModal);
                 staffPanel.classList.add('active');
                 overlay.classList.add('active');
-
-                // Register Service Worker and subscribe for push notifications
-                await registerServiceWorkerAndSubscribePush();
-
-            } catch (error) {
-                console.error('Staff login failed:', error);
-                showToast(`Login failed: ${error.message}. Please check credentials.`, true);
+                
+                // Load staff data and start auto-refresh
+                loadStaffData();
+                startOrderRefresh();
+                
+                // Show notification for new orders if any
+                checkForNewOrders();
+            } else {
+                showToast('Invalid staff ID or password', true);
             }
+        } catch (error) {
+            console.error('Error during login:', error);
+            showToast('Login failed. Please try again.', true);
         }
-
-        // --- Staff Panel UI Updates (New Functions) ---
-        // Get the order list container in the staff panel
-        const staffOrderList = staffPanel.querySelector('.order-list');
-
-        // Function to populate the staff panel with a list of orders
-        function populateStaffOrders(ordersToDisplay) {
-            staffOrderList.innerHTML = ''; // Clear existing orders
-            if (ordersToDisplay.length === 0) {
-                staffOrderList.innerHTML = '<p style="text-align: center; color: var(--light-text); padding: 20px;">No orders yet.</p>';
-                return;
+    }
+    
+    // Start auto-refresh of orders in staff panel
+    function startOrderRefresh() {
+        // Clear any existing interval
+        if (orderRefreshInterval) {
+            clearInterval(orderRefreshInterval);
+        }
+        
+        // Check for new orders every 5 seconds
+        orderRefreshInterval = setInterval(() => {
+            if (staffPanel.classList.contains('active')) {
+                checkForNewOrders();
             }
-            // Add orders, newest first
-            ordersToDisplay.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            ordersToDisplay.forEach(order => addOrderToStaffPanel(order));
+        }, 5000);
+    }
+    
+    // Check for new orders since last check
+    async function checkForNewOrders() {
+        try {
+            const response = await fetch(`${API_BASE}/orders`);
+            const orders = await response.json();
+            
+            // Find orders that are newer than our last check
+            const newOrders = orders.filter(order => 
+                order.timestamp > lastOrderCheck && order.status === 'received'
+            );
+            
+            // Update last check time
+            lastOrderCheck = Date.now();
+            
+            // If there are new orders, show notification and refresh
+            if (newOrders.length > 0) {
+                showToast(`New order received! ${newOrders.length} order(s) waiting.`);
+                loadStaffData();
+            }
+        } catch (error) {
+            console.error('Error checking for new orders:', error);
         }
-
-        // Function to add a single order to the staff panel UI
-        function addOrderToStaffPanel(order) {
-            const orderItem = document.createElement('div');
-            orderItem.className = 'order-item';
-            orderItem.setAttribute('data-order-id', order.id); // Add data attribute for easy lookup
-
-            // Calculate total amount (assuming delivery is always 15)
-            const totalAmount = order.items.reduce((sum, item) => sum + item.price, 0) + 15;
-            const itemsSummary = order.items.map(item => `${item.name}${item.variant ? ` (${item.variant})` : ''}`).join(', ');
-
-            orderItem.innerHTML = `
-                <div class="order-id">${order.id}</div>
-                <div class="order-details">
-                    ${order.customer.name} • ${itemsSummary} • ₹${totalAmount}
-                    ${order.customer.specialInstructions ? `<br><em>Instructions: ${order.customer.specialInstructions}</em>` : ''}
-                </div>
-                <div class="order-status status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</div>
-                <div style="margin-top: 10px;">
-                    <select class="form-input order-status-select" data-order-id="${order.id}">
+    }
+    
+    // Load staff data (orders and stats)
+    async function loadStaffData() {
+        try {
+            // Load orders
+            const ordersResponse = await fetch(`${API_BASE}/orders`);
+            const orders = await ordersResponse.json();
+            
+            // Sort orders by date (newest first)
+            orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            const ordersContainer = document.querySelector('.order-list');
+            ordersContainer.innerHTML = '';
+            
+            orders.forEach(order => {
+                const orderElement = document.createElement('div');
+                orderElement.className = 'order-item';
+                
+                const itemsText = order.items.map(item => 
+                    `${item.quantity || 1}x ${item.name}${item.variant ? ` (${item.variant})` : ''}`
+                ).join(', ');
+                
+                const orderDate = new Date(order.createdAt).toLocaleTimeString();
+                
+                orderElement.innerHTML = `
+                    <div class="order-id">Order #${order.id}</div>
+                    <div class="order-details">${order.customer.name} • ${itemsText} • ₹${order.total}</div>
+                    <div class="order-details">Placed at: ${orderDate}</div>
+                    <div class="order-status status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</div>
+                    <select class="order-status-select" data-order-id="${order.id}">
                         <option value="received" ${order.status === 'received' ? 'selected' : ''}>Received</option>
                         <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Preparing</option>
                         <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                        <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                </div>
-            `;
-            staffOrderList.prepend(orderItem); // Add new orders to the top of the list
-
-            // Add event listener for status change
-            orderItem.querySelector('.order-status-select').addEventListener('change', function() {
-                const orderId = this.getAttribute('data-order-id');
-                const newStatus = this.value;
-                if (socket && socket.connected) { // Ensure socket is connected before emitting
-                    socket.emit('updateOrderStatus', { orderId, newStatus });
-                } else {
-                    console.warn('Socket not connected. Cannot update order status.');
-                    showToast('Cannot update status: Not connected to server.', true);
+                `;
+                
+                ordersContainer.appendChild(orderElement);
+            });
+            
+            // Add event listeners to status dropdowns
+            document.querySelectorAll('.order-status-select').forEach(select => {
+                select.addEventListener('change', async function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    const newStatus = this.value;
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to update order status');
+                        }
+                        
+                        showToast(`Order status updated to ${newStatus}`);
+                        
+                        // Reload the orders to reflect the change
+                        loadStaffData();
+                    } catch (error) {
+                        console.error('Error updating order status:', error);
+                        showToast('Failed to update order status', true);
+                    }
+                });
+            });
+            
+            // Load stats
+            const statsResponse = await fetch(`${API_BASE}/stats`);
+            const stats = await statsResponse.json();
+            
+            // Update stats display
+            const statsContainers = document.querySelectorAll('.staff-section:nth-child(4) .staff-grid > div');
+            if (statsContainers.length >= 2) {
+                statsContainers[0].querySelector('div:first-child').textContent = stats.totalOrders;
+                statsContainers[1].querySelector('div:first-child').textContent = stats.activeOrders;
+            }
+            
+        } catch (error) {
+            console.error('Error loading staff data:', error);
+            showToast('Failed to load staff data', true);
+        }
+    }
+    
+    // Event Listeners
+    cartBtn.addEventListener('click', toggleCart);
+    closeCart.addEventListener('click', toggleCart);
+    overlay.addEventListener('click', function() {
+        cartDrawer.classList.remove('open');
+        checkoutModal.classList.remove('active');
+        loginModal.classList.remove('active');
+        staffPanel.classList.remove('active');
+        overlay.classList.remove('active');
+        
+        // Stop order refresh when panel is closed
+        if (orderRefreshInterval) {
+            clearInterval(orderRefreshInterval);
+            orderRefreshInterval = null;
+        }
+    });
+    
+    // Add to cart functionality
+    document.querySelectorAll('.menu-card .btn-primary').forEach(button => {
+        if (button.textContent === 'Add') {
+            button.addEventListener('click', function() {
+                const card = this.closest('.menu-card');
+                const name = card.querySelector('.menu-name').textContent;
+                const priceText = card.querySelector('.menu-price').textContent;
+                const basePrice = parseInt(priceText.replace('₹', ''));
+                let variant = null;
+                
+                if (card.querySelector('.menu-select')) {
+                    variant = card.querySelector('.menu-select option:checked').textContent.split('—')[0].trim();
                 }
+                
+                addToCart({ 
+                    name, 
+                    basePrice,
+                    price: basePrice, 
+                    variant,
+                    quantity: 1
+                });
             });
         }
-
-        // Function to update an existing order in the staff panel UI
-        function updateOrderInStaffPanel(updatedOrder) {
-            const existingOrderItem = staffOrderList.querySelector(`[data-order-id="${updatedOrder.id}"]`);
-            if (existingOrderItem) {
-                // Update the status text and class
-                existingOrderItem.querySelector('.order-status').className = `order-status status-${updatedOrder.status}`;
-                existingOrderItem.querySelector('.order-status').textContent = updatedOrder.status.charAt(0).toUpperCase() + updatedOrder.status.slice(1);
-                // Update the select dropdown value
-                existingOrderItem.querySelector('.order-status-select').value = updatedOrder.status;
-            }
+    });
+    
+    // Update price when selection changes
+    document.querySelectorAll('.menu-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const priceText = this.options[this.selectedIndex].textContent.split('—')[1].trim();
+            const price = parseInt(priceText.replace('₹', ''));
+            const card = this.closest('.menu-card');
+            card.querySelector('.menu-price').textContent = `₹${price}`;
+            card.querySelector('.menu-badge').textContent = `Selected: ${this.options[this.selectedIndex].textContent.split('—')[0].trim()}`;
+        });
+    });
+    
+    document.querySelector('.checkout-btn').addEventListener('click', function() {
+        if (cartItems.length > 0) {
+            toggleModal(checkoutModal);
         }
+    });
+    
+    closeCheckout.addEventListener('click', function() {
+        toggleModal(checkoutModal);
+    });
+    
+    cancelCheckout.addEventListener('click', function() {
+        toggleModal(checkoutModal);
+    });
+    
+    confirmOrder.addEventListener('click', placeOrder);
+    
+    staffLoginBtn.addEventListener('click', function() {
+        toggleModal(loginModal);
+    });
+    
+    cancelLogin.addEventListener('click', function() {
+        toggleModal(loginModal);
+    });
+    
+    confirmLogin.addEventListener('click', staffLogin);
+    
+    closeStaffPanel.addEventListener('click', function() {
+        staffPanel.classList.remove('active');
+        overlay.classList.remove('active');
         
-        // Event Listeners
-        cartBtn.addEventListener('click', toggleCart);
-        closeCart.addEventListener('click', toggleCart);
-        overlay.addEventListener('click', function() {
-            cartDrawer.classList.remove('open');
-            checkoutModal.classList.remove('active');
-            loginModal.classList.remove('active');
-            // Check if staff panel was active before closing it
-            if (staffPanel.classList.contains('active')) {
-                staffPanel.classList.remove('active');
-                if (socket) {
-                    socket.disconnect();
-                    console.log('Socket.IO disconnected on overlay click (staff panel closed).');
-                }
-            }
-            overlay.classList.remove('active');
-        });
-        
-        document.querySelectorAll('.btn-primary').forEach(button => {
-            if (button.textContent === 'Add') {
-                button.addEventListener('click', function() {
-                    const card = this.closest('.menu-card');
-                    const name = card.querySelector('.menu-name').textContent;
-                    const price = parseInt(card.querySelector('.menu-price').textContent.replace('₹', ''));
-                    let variant = null;
-                    
-                    if (card.querySelector('.menu-select')) {
-                        variant = card.querySelector('.menu-select option:checked').textContent.split('—')[0].trim();
-                    }
-                    
-                    addToCart({ name, price, variant });
-                });
-            }
-        });
-        
-        document.querySelector('.checkout-btn').addEventListener('click', function() {
-            if (cartItems.length > 0) {
-                toggleModal(checkoutModal);
-            }
-        });
-        
-        closeCheckout.addEventListener('click', function() {
-            toggleModal(checkoutModal);
-        });
-        
-        cancelCheckout.addEventListener('click', function() {
-            toggleModal(checkoutModal);
-        });
-        
-        confirmOrder.addEventListener('click', placeOrder);
-        
-        staffLoginBtn.addEventListener('click', function() {
-            toggleModal(loginModal);
-        });
-        
-        cancelLogin.addEventListener('click', function() {
-            toggleModal(loginModal);
-        });
-        
-        confirmLogin.addEventListener('click', staffLogin);
-        
-        closeStaffPanel.addEventListener('click', function() {
-            staffPanel.classList.remove('active');
-            overlay.classList.remove('active');
-            // Disconnect Socket.IO when staff panel is closed
-            if (socket) {
-                socket.disconnect();
-                console.log('Socket.IO disconnected on staff panel close.');
-            }
-        });
-        
-        // Initialize
-        updateCartCount();
-        updateCartItems();
-    </script>
+        // Stop order refresh when panel is closed
+        if (orderRefreshInterval) {
+            clearInterval(orderRefreshInterval);
+            orderRefreshInterval = null;
+        }
+    });
+    
+    // Initialize
+    updateCartCount();
+    updateCartItems();
+    
+    // Set initial last check time
+    lastOrderCheck = Date.now();
+</script>
 </body>
 </html>

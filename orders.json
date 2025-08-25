@@ -1,0 +1,27 @@
+[
+  {
+    "id": "ORD-1756105786979",
+    "customer": {
+      "name": "11111111111",
+      "phone": "08868083436",
+      "address": "Vaishali Enclave Gate no.2 Khurja"
+    },
+    "items": [
+      {
+        "name": "Veg VyBBe Steamed Momos",
+        "variant": "Half (6 pcs)",
+        "price": 195,
+        "quantity": 5,
+        "basePrice": 39
+      }
+    ],
+    "specialInstructions": "",
+    "paymentMethod": "COD",
+    "subtotal": 195,
+    "delivery": 15,
+    "total": 210,
+    "status": "received",
+    "createdAt": "2025-08-25T07:09:46.979Z",
+    "updatedAt": "2025-08-25T07:09:46.979Z"
+  }
+]

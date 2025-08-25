@@ -1,147 +1,194 @@
 // server.js
-
 const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
+const fs = require('fs').promises;
+const path = require('path');
 const cors = require('cors');
-const webpush = require('web-push'); // Added for push notifications
+const bodyParser = require('body-parser');
 
 const app = express();
-const server = http.createServer(app);
-
-// Configure CORS for Express (for HTTP requests)
-// IMPORTANT: Replace 'http://127.0.0.1:5500' with your actual frontend URL
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
-}));
-
-// Configure Socket.IO with CORS (for WebSocket connections)
-// IMPORTANT: Replace 'http://127.0.0.1:5500' with your actual frontend URL
-const io = socketIo(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    }
-});
-
-app.use(express.json()); // Middleware to parse JSON request bodies
-
-// --- VAPID Keys (Generate these once and keep them secret!) ---
-// Run `npx web-push generate-vapid-keys` in your terminal to get these.
-// IMPORTANT: Replace these placeholders with your actual generated keys.
-const publicVapidKey = 'BLiRj3rWakPpbrEOrO1SsSbbwAFrflDw1p6ccmwi8AU1C9cE51vbrF4h3sOCMv5G6Osm9ysiXbkOCT2Q5bS4_rs';
-const privateVapidKey = 'U_xYGvp_sh2I5yHfiwTTFlB-7IO3jRIq_knUcSny1z8';
-
-// IMPORTANT: Replace 'mailto:your-email@example.com' with your actual email.
-webpush.setVapidDetails('mailto:prog98952@gmail.com', publicVapidKey, privateVapidKey);
-
-// --- In-memory "Database" for orders, staff, and subscriptions ---
-let orders = []; // Stores all placed orders
-let staffMembers = [
-    { id: 'staff', password: 'password', name: 'Admin Staff', role: 'Manager' }
-]; // Example staff credentials
-let pushSubscriptions = []; // Stores push notification subscriptions for staff
-
-// --- API Endpoints ---
-
-// Endpoint for customers to place orders
-app.post('/api/orders', (req, res) => {
-    const newOrder = {
-        id: `ORD-${Date.now()}`,
-        customer: req.body.customer,
-        items: req.body.items,
-        status: 'received', // Initial status
-        timestamp: new Date().toISOString()
-    };
-
-    orders.push(newOrder);
-    console.log('New order received:', newOrder);
-
-    // Emit the new order to all connected staff clients via Socket.IO
-    io.emit('newOrder', newOrder); // 'newOrder' is the event name
-
-    // Send push notification to all subscribed staff
-    const notificationPayload = JSON.stringify({
-        title: `New Order: ${newOrder.id}`,
-        body: `Customer: ${newOrder.customer.name}, Items: ${newOrder.items.length}`,
-        body: `Address: ${newOrder.customer.address}, Phone: ${newOrder.customer.phone}, `,
-        url: 'http://127.0.0.1:5500' // IMPORTANT: URL to open when notification is clicked (your frontend URL)
-    });
-
-    pushSubscriptions.forEach(sub => {
-        webpush.sendNotification(sub, notificationPayload)
-            .then(() => console.log('Push notification sent!'))
-            .catch(error => console.error('Error sending push notification:', error.stack));
-    });
-
-    res.status(201).json({ message: 'Order placed successfully!', orderId: newOrder.id });
-});
-
-// Endpoint for staff login (basic example)
-app.post('/api/staff/login', (req, res) => {
-    const { staffId, password } = req.body;
-    const staff = staffMembers.find(s => s.id === staffId && s.password === password);
-
-    if (staff) {
-        // Send public VAPID key to the frontend upon successful login
-        res.status(200).json({ message: 'Login successful', staff: { id: staff.id, name: staff.name, role: staff.role }, publicVapidKey: publicVapidKey });
-    } else {
-        res.status(401).json({ message: 'Invalid staff ID or password' });
-    }
-});
-
-// Endpoint to get all current orders (for staff panel)
-app.get('/api/orders', (req, res) => {
-    res.status(200).json(orders);
-});
-
-// New endpoint to save push subscriptions from the frontend
-app.post('/api/subscribe', (req, res) => {
-    const subscription = req.body;
-    console.log('Received push subscription:', subscription);
-
-    // In a real app, you'd save this to a database associated with the staff member
-    // For this example, we'll just add it to our in-memory array, ensuring no duplicates
-    const existingSub = pushSubscriptions.find(s => s.endpoint === subscription.endpoint);
-    if (!existingSub) {
-        pushSubscriptions.push(subscription);
-        console.log('New push subscription added.');
-    } else {
-        console.log('Subscription already exists.');
-    }
-
-    res.status(201).json({ message: 'Subscription saved' });
-});
-
-// --- Socket.IO Connection Handling ---
-io.on('connection', (socket) => {
-    console.log('A staff client connected:', socket.id);
-
-    // Optionally, send existing orders to newly connected staff
-    socket.emit('existingOrders', orders);
-
-    socket.on('disconnect', () => {
-        console.log('A staff client disconnected:', socket.id);
-    });
-
-    // Example: Staff can update order status (you'd add more robust logic here)
-    socket.on('updateOrderStatus', ({ orderId, newStatus }) => {
-        const orderIndex = orders.findIndex(o => o.id === orderId);
-        if (orderIndex !== -1) {
-            orders[orderIndex].status = newStatus;
-            console.log(`Order ${orderId} status updated to: ${newStatus}`);
-            // Broadcast the update to all connected staff clients
-            io.emit('orderUpdated', orders[orderIndex]);
-        }
-    });
-});
-
-// --- Start the Server ---
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Frontend should be configured to send requests to http://localhost:${PORT}`);
-    console.log(`VAPID Public Key: ${publicVapidKey}`);
+const ORDERS_FILE = path.join(__dirname, 'orders.json');
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public')); // Serve static files if needed
+
+// Initialize orders file if it doesn't exist
+async function initializeOrdersFile() {
+  try {
+    await fs.access(ORDERS_FILE);
+  } catch (error) {
+    // File doesn't exist, create it with empty array
+    await fs.writeFile(ORDERS_FILE, JSON.stringify([], null, 2));
+    console.log('Created new orders file');
+  }
+}
+
+// Read orders from file
+async function readOrders() {
+  try {
+    const data = await fs.readFile(ORDERS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading orders file:', error);
+    return [];
+  }
+}
+
+// Write orders to file
+async function writeOrders(orders) {
+  try {
+    await fs.writeFile(ORDERS_FILE, JSON.stringify(orders, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error writing to orders file:', error);
+    return false;
+  }
+}
+
+// API Routes
+
+// Get all orders
+app.get('/api/orders', async (req, res) => {
+  try {
+    const orders = await readOrders();
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
 });
+
+// Get order by ID
+app.get('/api/orders/:id', async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const order = orders.find(o => o.id === req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
+// Create a new order
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { customer, items, specialInstructions, paymentMethod } = req.body;
+    
+    // Basic validation
+    if (!customer || !customer.name || !customer.phone || !customer.address || !items || items.length === 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const orders = await readOrders();
+    
+    // Calculate totals
+    const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+    const delivery = 15; // Fixed delivery charge
+    const total = subtotal + delivery;
+    
+    // Create new order
+    const newOrder = {
+      id: `ORD-${Date.now()}`,
+      customer,
+      items,
+      specialInstructions: specialInstructions || '',
+      paymentMethod: paymentMethod || 'COD',
+      subtotal,
+      delivery,
+      total,
+      status: 'received',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Add to orders array and save
+    orders.push(newOrder);
+    const success = await writeOrders(orders);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to save order' });
+    }
+    
+    res.status(201).json(newOrder);
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+// Update order status
+app.put('/api/orders/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['received', 'preparing', 'delivered', 'cancelled'];
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const orders = await readOrders();
+    const orderIndex = orders.findIndex(o => o.id === req.params.id);
+    
+    if (orderIndex === -1) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    orders[orderIndex].status = status;
+    orders[orderIndex].updatedAt = new Date().toISOString();
+    
+    const success = await writeOrders(orders);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to update order' });
+    }
+    
+    res.json(orders[orderIndex]);
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// Staff authentication (simple version for demo)
+app.post('/api/staff/login', (req, res) => {
+  const { staffId, password } = req.body;
+  
+  // Simple authentication - in a real app, use proper authentication
+  if (staffId === 'staff' && password === 'password') {
+    res.json({ success: true, message: 'Login successful' });
+  } else {
+    res.status(401).json({ success: false, error: 'Invalid credentials' });
+  }
+});
+
+// Get order statistics
+app.get('/api/stats', async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const totalOrders = orders.length;
+    const activeOrders = orders.filter(o => 
+      o.status === 'received' || o.status === 'preparing'
+    ).length;
+    
+    res.json({ totalOrders, activeOrders });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
+// Start server
+async function startServer() {
+  await initializeOrdersFile();
+  
+  app.listen(PORT, () => {
+    console.log(`VyBBe server running on port ${PORT}`);
+  });
+}
+
+startServer().catch(console.error);
