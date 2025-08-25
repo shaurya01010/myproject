@@ -10,9 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^2.2.0",
+    "body-parser": "^1.x",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
+    "express": "^4.x",
+    "razorpay": "^2.x",
     "socket.io": "^4.8.1",
     "web-push": "^3.6.7"
   }
